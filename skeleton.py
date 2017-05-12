@@ -9,76 +9,60 @@ from base64 import b64encode, b64decode
 # Loads RSA key from specified file
 def loadKey(keyPath):
         key = None
-	# Open the key file
-	with open(keyPath, 'r') as keyFile:
-		# Read the key file
+        with open(keyPath, 'rb') as keyFile:
 		keyFileContent = keyFile.read()		
-	# Decode the key
-	decodedKey = b64decode(keyFileContent)
-	# Return the RSA key
-	return RSA.importKey(decodedKey)
-
-# Signs the string using an RSA private key. Returns file signature
-def digSig(sigKey, string):
-        dataSig = sigKey.sign(string, 0)
-        return dataSig
-
-
-
-
-
+	        # Decode the key
+	        decodedKey = b64decode(keyFileContent)
+	        # Return RSA key
+                key = RSA.importKey(decodedKey)
+        return key
 
 # Returns signature of file by privKey
-def getFileSig(fileName, privKey):
-	# Read the file
+def getFileSignature(fileName, privKey):
         with open(fileName, 'rb') as fileToSign:
                 contents = fileToSign.read()
-        # Compute the SHA-512 hash of the contents
         contentHash = SHA512.new(contents).hexdigest()
-        # Return signed hash. This is the digital signature
-        return  digSig(privKey, contentHash)
+        digitalSignature = privKey.sign(contentHash, 0)
+        return digitalSignature
 
 # Saves a digital signature to specified file
 def saveSig(fileName, signature):
-	# Signature is a tuple with a single value.
+	# Signature is a tuple with a null second value
         sig = str(signature[0])
-        # Convert signature to base 64
-        sig64 = b64encode(sig)
-        with open(fileName, 'wb') as sigFile:
-                sigFile.write(sig64)
+        # Converts sig into a base 64 integer string 
+        encodedSignature = b64encode(sig)
+        print "Encoded signature is: ", encodedSignature, '\n'
+        with open(fileName, 'wb') as signatureFile:
+                signatureFile.write(encodedSignature)
         return
 
 # Loads the signature from specified file and converts it into a tuple
 def loadSig(fileName):
-	# TODO: Load the signature from the specified file.
-        with open(fileName, 'rb') as loadSigFile:
-                signature = loadSigFile.read()
-        # Convert into integer in single element tuple
-        #sig = b64decode(signature)
-        return (signature, )
+        with open(fileName, 'rb') as signatureFile:
+                signature = signatureFile.read()
+        # Convert into string in single element tuple
+        return (signature, None)
 
 
 # Verifies the given signature with a public key and other file
-# @param signature - the signature of the file to verify
 def verifyFileSig(fileName, pubKey, signature):
-	# 1. Read the contents of the input file (fileName)
+	# Read the contents of the input file (fileName)
         with open(fileName, 'rb') as inputFile:
                 contents = inputFile.read()
-        # 2. Compute the SHA-512 hash of the contents
+
+
+        print contents
+        decodedSig = b64decode(signature[0])
+        # Compute the SHA-512 hash of the contents
         contentHash = SHA512.new(contents).hexdigest()
-        # 3. Use the verifySig function you implemented in
-	# order to verify the file signature
-	# 4. Return the result of the verification i.e.,
-        return verifySig(contentHash, signature, pubKey)
 
+        # Decode loaded sig from base 64
+        #decodedSig = b64decode(signature[0])
 
-# Verifies the signature, or returns false
-# @param sig - the signature to check against
-def verifySig(theHash, sig, veriKey):
-	# TODO: Verify the hash against the provided signature using the verify() function of the key
-        signature = sig[0]
-        return veriKey.verify(theHash, b64decode(signature))		
-
+        # Return result of verification
+        #sig = (int(decodedSig),)
+        #print type(sig[0])
+        return pubKey.verify(contentHash, (int(b64decode(signature[0])), '')) 
 
 
 def main():
@@ -87,29 +71,27 @@ def main():
 		print "USAGE: " + sys.argv[0] + " <KEY FILE NAME> <SIGNATURE FILE NAME> <INPUT FILE NAME> <MODE>"
 		exit(-1)
 	        
-	# The key file
 	keyFileName = sys.argv[1]
-	# Signature file name
 	sigFileName = sys.argv[2]
-	# The input file name
 	inputFileName = sys.argv[3]
-	# The mode i.e., sign or verify
-	mode = sys.argv[4]
+        mode = sys.argv[4]
 
         if mode == "sign":		
-		# TODO: 1. Get the file signature
-		#       2. Save the signature to the file
                 privKey = loadKey(keyFileName)
-                fileSig = getFileSig(inputFileName, privKey)
+                print "privKey is: ", privKey, '\n'
+                print type(privKey), '\n'
+                fileSig = getFileSignature(inputFileName, privKey)
                 saveSig(sigFileName, fileSig)
-                print "Signature saved to file ", sigFileName
+                print "Signature saved to file: ", sigFileName
 
        	elif mode == "verify":
-		# TODO Use the verifyFileSig() function to check if the
-		# signature in the signature file matches the signature of the input file
                 pubKey = loadKey(keyFileName)
+                print "pubKey is: ", pubKey, '\n'
+                print type(pubKey), '\n'
                 signature = loadSig(sigFileName)
-                if verifyFileSig(sigFileName, pubKey, signature):
+                print "Signature is: ", signature[0], '\n'
+                print type(signature[0]), '\n'
+                if verifyFileSig(inputFileName, pubKey, signature) == True:
                         print "Match!"
                 else:
                         print "No Match!"
@@ -117,6 +99,15 @@ def main():
 	else:
 		print "Invalid mode ", mode	
 
-### Call the main function ####
+        return
+
+
+
+
+
+
+
+                
+### Main function
 if __name__ == "__main__":
 	main()
